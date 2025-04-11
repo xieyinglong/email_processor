@@ -1,6 +1,16 @@
+import pathlib
+from configparser import ConfigParser
 from typing import Dict
 
 import pymysql
+
+from src.log import setup_logging
+
+config = ConfigParser()
+config_path = pathlib.Path(__file__).parent.parent / "src" / "config.cfg"
+config.read(config_path, encoding="utf-8")
+
+logger = setup_logging()
 
 
 def get_key_value_map_from_mysql(
@@ -16,11 +26,11 @@ def get_key_value_map_from_mysql(
     try:
         # 建立数据库连接
         connection = pymysql.connect(
-            host="10.6.135.34",
-            user="root",
-            password="root@mysql",
-            database="excel_to_database",
-            port=3306,
+            host=config.get("DATABASE", "host"),
+            user=config.get("DATABASE", "user"),
+            password=config.get("DATABASE", "password"),
+            database=config.get("DATABASE", "database"),
+            port=int(config.get("DATABASE", "port")),
             charset='utf8mb4',
             cursorclass=pymysql.cursors.DictCursor
         )
@@ -40,8 +50,7 @@ def get_key_value_map_from_mysql(
                         result_map[str(key)] = value if value is not None else None
 
     except pymysql.Error as e:
-        print(f"数据库错误: {e}")
+        logger.error(f"数据库错误: {e}")
         raise
 
     return result_map
-

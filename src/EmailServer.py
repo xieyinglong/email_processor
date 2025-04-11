@@ -1,7 +1,4 @@
-# 无法异步执行，需要换 aioimaplib 库 执行
-# https://blog.csdn.net/gitblog_00783/article/details/142075459
-# https://github.com/bamthomas/aioimaplib
-# 这里采用多进程计算，多进程中由于_io.BufferedReader 无法序列化server，所以需要单独写一个函数
+
 import email
 import pathlib
 from configparser import ConfigParser
@@ -12,10 +9,14 @@ from multiprocessing import Pool
 from imapclient import IMAPClient
 from rich.progress import Progress
 
+from src.log import setup_logging
+
 # 读取配置
 config = ConfigParser()
 config_path = pathlib.Path(__file__).parent / "config.cfg"
 config.read(config_path, encoding="utf-8")
+# 日志记录
+logger = setup_logging()
 
 
 class EmailServer:
@@ -86,7 +87,7 @@ class EmailServer:
             return need_list
 
         except Exception as e:
-            print(f"邮件筛选出错：{e}")
+            logger.error(f"邮件筛选出错：{e}")
         return []
 
     def download_email(self, need_id: int, echo=False):
@@ -128,7 +129,7 @@ class EmailServer:
                     downloaded_files.append(str(filepath))
 
                     if echo:
-                        print(f"附件已保存到: {filepath}")
+                        logger.info(f"附件已保存到: {filepath}")
 
         return downloaded_files if downloaded_files else None
 
@@ -136,7 +137,7 @@ class EmailServer:
 def _download_email(id):
     email_server = EmailServer()
     file_path = email_server.download_email(id, echo=True)
-    print(f"下载完成：{file_path}")
+    logger.info(f"下载完成：{file_path}")
 
 
 def download_emails(date_str, minutes, subject_keyword, mulprocess=False):

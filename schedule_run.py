@@ -1,4 +1,5 @@
 import threading
+import threading
 import time as time_module
 from datetime import time as date_time, datetime, timedelta
 from typing import List, Optional
@@ -10,6 +11,10 @@ from src import DbServer
 from src.DbServer import DataBaseServer
 from src.EmailServer import download_emails
 from src.excel_loader import xlsx_to_database
+from src.log import setup_logging
+
+# 使用示例
+logger = setup_logging()
 
 
 class EmailDbTrigger:
@@ -43,7 +48,7 @@ def query_database(host: str, user: str, password: str, database: str, port: int
             charset='utf8mb4'  # 默认为utf8mb4，可根据实际需求更换
         )
 
-        print(f"\n执行查询时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        logger.info(f"执行查询时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
         with connection.cursor() as cursor:
             # 执行SQL查询（指定表名 email_db_trigger）
@@ -58,9 +63,9 @@ def query_database(host: str, user: str, password: str, database: str, port: int
             rows = cursor.fetchall()
 
             # 打印结果
-            print(f"共查询到 {len(rows)} 条记录:")
+            logger.info(f"共查询到 {len(rows)} 条记录:")
             for row in rows:
-                print(row)
+                logger.info(row)
                 record = EmailDbTrigger(id=row[0], trigger_at=row[1], trigger_interval=row[2],
                                         trigger_interval_remain=row[3], email_time_range=row[4], update_status=row[5],
                                         subject_keyword=row[6], table_value=row[7], flag=row[8], mark=row[9],
@@ -68,7 +73,7 @@ def query_database(host: str, user: str, password: str, database: str, port: int
                 records.append(record)
             return records
     except Exception as e:
-        print(f"数据库查询出错: {e}")
+        logger.error(f"数据库查询出错: {e}")
     finally:
         if 'connection' in locals() and connection.open:
             connection.close()
@@ -128,12 +133,12 @@ def update_trigger_intervals(host: str, user: str, password: str, database: str,
                                              record.update_status)
 
             if update_params:
-                print(update_params)
+                logger.info(update_params)
                 cursor.executemany(update_sql, update_params)
                 connection.commit()
-                print(f"  已更新备注为 {update_mark} ，共计 {len(update_params)} 行数据!")
+                logger.info(f"  已更新任务{update_mark} ，共计 {len(update_params)} 条!")
     except Exception as e:
-        print(f"更新失败:{e}")
+        logger.error(f"更新失败:{e}")
         if connection:
             connection.rollback()
     finally:
@@ -176,7 +181,7 @@ def update_trigger_table(host: str, user: str, password: str, database: str, por
             charset='utf8mb4',  # 默认为utf8mb4，可根据实际需求更换
         )
 
-        print(f"\n执行查询时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        logger.info(f"\n执行查询时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
         with connection.cursor() as cursor:
 
@@ -199,7 +204,7 @@ def update_trigger_table(host: str, user: str, password: str, database: str, por
                                  update_status=row[3])
 
     except Exception as e:
-        print(f"数据库查询出错: {e}")
+        logger.error(f"数据库查询出错: {e}")
     finally:
         if 'connection' in locals() and connection.open:
             connection.close()
