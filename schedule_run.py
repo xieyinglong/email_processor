@@ -1,5 +1,4 @@
 import threading
-import threading
 import time as time_module
 from datetime import time as date_time, datetime, timedelta
 from typing import List, Optional
@@ -186,16 +185,14 @@ def update_trigger_table(host: str, user: str, password: str, database: str, por
         with connection.cursor() as cursor:
 
             # 执行SQL查询（指定表名）
-            sql: str = (
-                f"SELECT id, trigger_at, email_time_range, update_status, subject_keyword, table_value, flag, remark, primary_column"
-                f"FROM email_db_trigger where id = %s")
+            sql: str = f"SELECT id, trigger_at, email_time_range, update_status, subject_keyword, table_value, flag, remark, primary_column FROM email_db_trigger where id = %s"
             cursor.execute(sql, record_id)
 
             # 获取一行数据
             row = cursor.fetchone()
             if row is not None:
                 # 新增数据映射规则（文件关键字-数据表名）
-                file_patterns.append({row[4]: row[5]})
+                file_patterns[row[4]] = row[5]
                 primary_column_map[row[5]] = row[8]
                 # 下载邮件(row[2]row[4]分别为邮件选择时间范围，邮件主题关键字段)
                 download_emails(date_str, minutes=row[2], subject_keyword=row[4], mulprocess=False)
@@ -242,6 +239,7 @@ def schedule_checker():
 
 # 定时器启动
 def start_schedule():
+    # schedule.every(1).hours.do(process_triggers) # 每小时执行一次process_triggers函数
     # schedule.every(1).minutes.do(process_triggers)  # 每分钟执行一次process_triggers函数
     schedule.every(1).seconds.do(process_triggers)  # 每秒执行一次process_triggers函数
     schedule_checker()  # 执行schedule_checker函数
