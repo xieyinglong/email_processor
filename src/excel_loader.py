@@ -1,7 +1,7 @@
 import os
 
 import pandas as pd
-from sqlalchemy import create_engine, inspect, bindparam, text
+from sqlalchemy import create_engine, inspect, bindparam, text, MetaData
 
 from models.table_mapping import get_key_value_map_from_mysql
 from src.log import setup_logging
@@ -103,11 +103,18 @@ def xlsx_to_database(folder_path, db_connection_string, file_patterns, primary_c
         # 确定表名对应主键
         primary_column = primary_column_map.get(table_name)
 
-        # 获取数据库表列名
+        # 获取数据库表字段列名
         inspector = inspect(engine)
         db_columns = [col['name'] for col in inspector.get_columns(table_name)]
+
         # 数据库获取映射
         columns_mapping = get_key_value_map_from_mysql(table_name)
+
+        # 获取数据库字段格式映射
+        metadata = MetaData()
+        metadata.reflect(bind=engine, only=[table_name])
+        existing_table = metadata.tables[table_name]
+        dtype_map = {col.name: col.type for col in existing_table.columns}
 
         # 读取file文件
         df_list = read_file(file_path)
@@ -117,15 +124,13 @@ def xlsx_to_database(folder_path, db_connection_string, file_patterns, primary_c
             if df.empty:
                 logger.info("  警告: 工作表为空，跳过")
                 continue
-
+            # 处理重复行
+            df.drop_duplicates(inplace=True)
             # 写入数据库
             # 确保表和数据库列顺序一致
             df.rename(columns=columns_mapping, inplace=True)
             df = df[db_columns]
             # TODO 更新表中列数据(暂不进行任何处理)
-            # for col, map_dict in get_text_map().items():
-            #     if col in df.columns:
-            #         df[col] = df[col].map(map_dict)
 
             # 如果表已存在，则追加数据（增量更新）
             if update_status == 1:
@@ -133,7 +138,8 @@ def xlsx_to_database(folder_path, db_connection_string, file_patterns, primary_c
                     name=table_name,
                     con=engine,
                     if_exists='append',
-                    index=False
+                    index=False,
+                    dtype=dtype_map
                     # chunksize=5000, # 分批
                     # method='multi' # 使用多线程更新
                 )
@@ -143,7 +149,8 @@ def xlsx_to_database(folder_path, db_connection_string, file_patterns, primary_c
                     name=table_name,
                     con=engine,
                     if_exists='replace',
-                    index=False
+                    index=False,
+                    dtype=dtype_map
                     # chunksize=5000, # 分批
                     # method='multi' # 使用多线程更新
                 )
@@ -163,7 +170,8 @@ def xlsx_to_database(folder_path, db_connection_string, file_patterns, primary_c
                     name=table_name,
                     con=engine,
                     if_exists='append',
-                    index=False
+                    index=False,
+                    dtype=dtype_map
                     # chunksize=5000, # 分批
                     # method='multi' # 使用多线程更新
                 )
