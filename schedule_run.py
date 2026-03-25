@@ -247,10 +247,11 @@ def start_schedule():
 
 if __name__ == "__main__":
     print("程序启动，立即开始定时执行...")
-    schedule_thread = threading.Thread(target=start_schedule, daemon=True)
-    schedule_thread.start()
-    try:
-        while True:
-            time_module.sleep(1)
-    except KeyboardInterrupt:
-        print("进程终止...")
+    start_schedule()
+    # schedule_thread = threading.Thread(target=start_schedule, daemon=True)
+    # schedule_thread.start()
+    # try:
+    #     while True:
+    #         time_module.sleep(1)
+    # except KeyboardInterrupt:
+    #     print("进程终止...")
